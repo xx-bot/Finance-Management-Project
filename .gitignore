@@ -1,0 +1,51 @@
+# Local credentials (keep the example configuration)
+.env
+.env.*
+!.env.example
+.aws/
+
+# Python environments and generated files
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.egg-info/
+build/
+dist/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Datasets, trained model artifacts, and generated predictions
+/dataset/
+/dataset.zip
+/model/
+/smolvlm-receipt-lora/
+/checkpoints/
+/outputs/
+/results/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Local receipt images in the project root; images in documentation can be tracked
+/*.jpg
+/*.jpeg
+/*.png
+/*.webp
+/*.heic
+
+# Local editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
