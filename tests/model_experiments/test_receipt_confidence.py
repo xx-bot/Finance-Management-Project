@@ -10,8 +10,8 @@ from unittest.mock import Mock, patch
 import torch
 from PIL import Image
 
-from receipt_confidence import score_generated_fields, token_spans, value_spans
-from smolvlm_inference import ReceiptExtractor
+from experiments.shared.receipt_confidence import score_generated_fields, token_spans, value_spans
+from experiments.smolvlm.inference import ReceiptExtractor
 
 
 class CharacterTokenizer:

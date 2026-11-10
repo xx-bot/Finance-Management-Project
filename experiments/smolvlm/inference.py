@@ -1,6 +1,6 @@
 """Extract receipt JSON with the trained adapter on a local CUDA GPU.
 
-CLI: python smolvlm_inference.py receipt.jpg
+CLI: python -m experiments.smolvlm.inference receipt.jpg
 Python: extractor = ReceiptExtractor(); result = extractor.predict("receipt.jpg")
 Dependencies: CUDA PyTorch, transformers, peft, accelerate, bitsandbytes, pillow.
 Scores are uncalibrated token probabilities. Use --no-confidence for plain JSON.
@@ -10,9 +10,10 @@ import argparse
 import json
 from pathlib import Path
 
-from receipt_confidence import score_generated_fields
+from experiments.shared.receipt_confidence import score_generated_fields
+from receipt_extraction.config import project_root
 
-DEFAULT_ADAPTER = Path(__file__).resolve().parent / "model" / "smolvlm-receipt-lora"
+DEFAULT_ADAPTER = project_root() / "model" / "smolvlm-receipt-lora"
 
 
 def parse_receipt(text):
@@ -79,6 +80,7 @@ class ReceiptExtractor:
         self.processor.image_processor.size = {"longest_edge": longest_edge}
         base = AutoModelForImageTextToText.from_pretrained(
             config["model_id"],
+            revision=config.get("model_revision"),
             quantization_config=quantization,
             dtype=self.dtype,
             attn_implementation="sdpa",
@@ -165,6 +167,7 @@ def main():
     )
     text = json.dumps(extractor.predict(args.image, with_confidence=not args.no_confidence), ensure_ascii=False, indent=2)
     if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text + "\n", encoding="utf-8")
     print(text)
 

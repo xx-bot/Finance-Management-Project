@@ -1,6 +1,6 @@
-"""Extract receipt JSON using Gemini. Put GEMINI_API_KEY in the adjacent .env file.
+"""Extract receipt JSON using Gemini. Put GEMINI_API_KEY in the project .env file.
 
-Usage: python gemini_inference.py dataset/receipt_dataset/1010-receipt.jpg
+Usage: python -m experiments.legacy_headers.gemini_inference dataset/receipt_dataset/1010-receipt.jpg
 Receipt images are sent to Google. Use a Free Tier API project for free-tier usage.
 Scores are model self-assessments, not token probabilities. Use --no-confidence for plain JSON.
 """
@@ -13,9 +13,10 @@ import os
 import sys
 from pathlib import Path
 
-from receipt_confidence import scored_receipt
+from experiments.shared.receipt_confidence import scored_receipt
+from receipt_extraction.config import project_root
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = project_root()
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
 FIELDS = ("company", "date", "address", "total")
 RECEIPT_SCHEMA = {

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finance-receipt-extraction"
+version = "0.1.0"
+description = "Gemini receipt extraction for a finance management application"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=2.34,<3",
+    "python-dotenv>=1,<2",
+    "pillow>=10",
+]
+
+[project.scripts]
+receipt-extract = "receipt_extraction.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["packages"]
+include = ["receipt_extraction*"]

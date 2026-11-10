@@ -1,0 +1,2 @@
+# Install a compatible CUDA-enabled PyTorch build first when running local VLMs.
+-r requirements-benchmark.txt

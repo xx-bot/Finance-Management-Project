@@ -1,0 +1,2 @@
+# Install the application package from the repository root; no CUDA dependencies.
+-e .

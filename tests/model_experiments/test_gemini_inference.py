@@ -8,7 +8,7 @@ from unittest.mock import Mock
 from google.genai import errors, types
 from PIL import Image
 
-from gemini_inference import DEFAULT_MODEL, parse_receipt, predict_receipt
+from experiments.legacy_headers.gemini_inference import DEFAULT_MODEL, parse_receipt, predict_receipt
 
 
 class GeminiRequestTests(unittest.TestCase):

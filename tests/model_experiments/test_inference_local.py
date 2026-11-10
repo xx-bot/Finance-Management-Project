@@ -3,7 +3,7 @@ import unittest
 
 import torch
 
-from smolvlm_inference import parse_receipt, receipt_stopping_criteria
+from experiments.smolvlm.inference import parse_receipt, receipt_stopping_criteria
 
 
 class CharacterTokenizer:

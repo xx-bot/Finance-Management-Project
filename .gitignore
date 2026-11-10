@@ -49,3 +49,18 @@ dist/
 .DS_Store
 Thumbs.db
 *.log
+
+# Application dependencies, builds, local uploads and databases
+node_modules/
+.next/
+.nuxt/
+.vite/
+.turbo/
+coverage/
+/apps/backend/uploads/
+/apps/backend/*.sqlite*
+/apps/backend/*.db
+/apps/frontend/dist/
+
+# Optional editable installs can place metadata alongside packages
+/packages/*.egg-info/
