@@ -1,8 +1,141 @@
 # Finance Management
 
-Receipt extraction for a finance management application, with **Gemini as the current provider** and local model research kept in a separate experiment area.
+Receipt extraction and a Flutter mobile finance app, with **Gemini as the current extraction provider** and local model research kept in a separate experiment area.
 
-The main workflow reads a receipt image and returns **purchased items and the final total**. It is available as a command-line tool and a reusable Python package. The backend, frontend, category classifier, and expense database are planned; their application folders are placeholders.
+The Python package reads a receipt image and returns **purchased items and the final total**. The mobile app provides expense tracking, receipt review, budgets, and category insights with local SQLite storage. The backend that connects mobile scans to Gemini is the next step; it has not been implemented. Item categories are currently selected by the user.
+
+## Mobile app: Flutter
+
+[apps/frontend](apps/frontend) contains **Pocket Ledger**, an Android/iOS app with a warm green interface inspired by Copilot Money's personal finance views and Ramp's receipt review workflow.
+
+- Home: monthly spending, budget progress, recent expenses, and receipts needing review.
+- Expenses: merchant/item search, month and category filters, editing, and deletion.
+- Scan: camera/gallery selection, photo preview, and a sample receipt flow.
+- Review: editable items, quantities, prices, categories, tax/discount adjustments, and final total.
+- Insights: spending charts based on recorded expenses and item categories.
+- Settings: IDR/MYR/USD ledgers, monthly budgets, CSV copy, and sample data controls.
+
+### Run the app
+
+Install the [Flutter SDK](https://docs.flutter.dev/install) and run `flutter doctor`. The project requires Flutter 3.35+ and Dart 3.9+. Android needs the Android toolchain, a compatible JDK (17 or later for the generated Gradle 9 runner), and an emulator or connected phone. iOS builds require macOS and Xcode.
+
+From the repository root:
+
+```bash
+python3 apps/frontend/tool/bootstrap.py --check
+cd apps/frontend
+flutter devices
+```
+
+Start an Android emulator or connect an Android phone before launching the app. If `flutter devices` lists only Linux, Flutter currently sees your desktop, which this mobile project does not target.
+
+- **Emulator:** in Android Studio, open **Tools → Device Manager**, create a phone virtual device if needed, and start it using the play button. Run `flutter devices` again after it finishes booting.
+- **Phone:** enable Developer options and USB debugging, connect it by USB, and accept the debugging authorization on the phone. Run `flutter devices` to confirm it appears.
+
+From `apps/frontend`, launch using the Android device ID printed by `flutter devices`:
+
+```bash
+flutter run -d YOUR_ANDROID_DEVICE_ID
+```
+
+Replace `YOUR_ANDROID_DEVICE_ID` with the actual ID, for example `emulator-5554`. If Android tooling is missing, run `flutter doctor -v` and follow the [Flutter Android setup guide](https://docs.flutter.dev/platform-integration/android/setup). Generating a Linux runner does not configure an Android device; desktop support would also need compatible storage and camera implementations.
+
+The bootstrap creates missing Android/iOS platform runners using your installed Flutter SDK, configures camera/photo descriptions and Android network access, resolves packages, formats Dart, and runs analysis and tests. It preserves the app's `lib/`, `test/`, and `pubspec.yaml`. Commit the generated platform runners and `pubspec.lock` after setup to make subsequent checkouts reproducible.
+
+If Gradle reports that it is running on Java 11, check `flutter doctor -v` for the Java version Flutter selected. `JAVA_HOME` can still point to Java 11 even when `java -version` reports a newer installation. Point Flutter explicitly to a compatible installed JDK. For example, on Ubuntu with OpenJDK 17 installed at the usual path:
+
+```bash
+flutter config --jdk-dir=/usr/lib/jvm/java-17-openjdk-amd64
+flutter doctor -v
+```
+
+Use the JDK path on your machine. This setting applies to all Flutter projects for your user. Restart VS Code after changing it, then retry `flutter run -d YOUR_ANDROID_DEVICE_ID`. See [Flutter's Java selection instructions](https://docs.flutter.dev/release/breaking-changes/android-java-gradle-migration-guide#solution-2-command-line). The Java/Kotlin compile target in the app does not select the JVM that launches Gradle.
+
+### Missing Android tools or NDK license
+
+If `flutter doctor -v` reports missing `cmdline-tools` and the build reports an unaccepted NDK license, install the command-line tools before running license commands. An SDK containing only `platform-tools` provides ADB but does not contain the Android build toolchain.
+
+For a VS Code setup without Android Studio, download the **Linux command-line tools ZIP** from the [official Android downloads page](https://developer.android.com/studio#command-line-tools-only). Review its terms when downloading. Use an SDK directory owned by your user, such as `~/Android/Sdk`, so package installation does not need changes to `/usr/lib/android-sdk`.
+
+For the currently published Linux ZIP, after downloading it to `~/Downloads`:
+
+```bash
+export ANDROID_HOME="$HOME/Android/Sdk"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+mkdir -p "$ANDROID_HOME/cmdline-tools"
+unzip "$HOME/Downloads/commandlinetools-linux-15859902_latest.zip" -d "$ANDROID_HOME/cmdline-tools"
+mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+```
+
+These extraction commands assume a fresh SDK directory. Use the filename you downloaded if Google has updated it, and the JDK path installed on your machine. The resulting executable must be at `~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager`.
+
+Install the packages requested by Flutter 3.47.x:
+
+```bash
+sdkmanager --sdk_root="$ANDROID_HOME" --licenses
+sdkmanager --sdk_root="$ANDROID_HOME" --install \
+  "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+flutter config --android-sdk "$ANDROID_HOME"
+flutter doctor -v
+```
+
+The license command is interactive: read each agreement and accept it if you agree. Keep these commands in the same terminal so the exported variables apply. Flutter's SDK selection persists; restart VS Code after changing it. Then retry `flutter run -d YOUR_ANDROID_DEVICE_ID` from `apps/frontend`. The missing Chrome and Linux desktop tooling checks do not block an Android phone build. See the [SDK Manager instructions](https://developer.android.com/tools/sdkmanager) and [NDK version installation guide](https://developer.android.com/studio/projects/install-ndk#install-specific-version).
+
+### Xiaomi/Redmi/POCO installation blocked
+
+If the APK builds successfully but deployment ends with `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`, check the phone's installation permissions. Open **Settings → Additional settings → Developer options**, enable **Install via USB**, keep **USB debugging** enabled, and complete the phone's confirmation prompts. Then unlock the phone, retry `flutter run -d YOUR_ANDROID_DEVICE_ID`, and approve the Pocket Ledger installation prompt when it appears. Menu names can vary by MIUI/HyperOS version. See the [Xiaomi installation settings in Digital.ai's device setup documentation](https://docs.digital.ai/continuous-testing/docs/sta/seetest-automation-home/seetestautomation-how-to/seetestautomation-connecting-devices-and-emulators/seetestautomation-connecting-real-physical-devices/seetestautomation-connecting-an-android-device/connect-xiaomi-device).
+
+### Try the app
+
+The app starts with clearly labeled **sample data**, which stays separate from personal expenses. Try **Scan → Try a sample receipt → Save sample expense** to explore the flow without a backend or API key. Use **Settings → Start tracking my expenses** or **Add expense** to start your own ledger. Personal expenses and receipt copies persist on the device; sample edits last only for that app session. There is no account or cloud synchronization yet.
+
+### Connect receipt extraction later
+
+Manual entry and sample scans work immediately after Flutter setup. Real image extraction requires the backend. The frontend already calls this proposed interface:
+
+```http
+POST /api/receipts/extract
+Content-Type: multipart/form-data
+
+image: <receipt image file>
+```
+
+Return the receipt JSON shown below, either directly or under `{"receipt": ...}` as returned by `ExtractionResult.to_dict()`. The review screen asks for merchant, date, currency, and categories because the current extraction contract contains items and total only.
+
+Once a backend implements that route, supply its base URL:
+
+```bash
+flutter run --dart-define=API_BASE_URL=https://your-backend.example
+# Android emulator with a backend running on the host machine:
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+```
+
+Android debug builds allow local HTTP development; use HTTPS for deployed services and iOS. The URL is a build-time setting. **Keep `GEMINI_API_KEY` in the backend `.env`; never put it in Flutter assets or `--dart-define`.** A configured URL indicates setup, not a successful health check. Backend authentication and deployment remain to be implemented.
+
+Before saving, the user must confirm the printed number convention (`1,234.56` or `1.234,56`). Malformed grouping such as `3,26000.00` is rejected. Missing item amounts or totals are not inferred. Differences between items, adjustments, and the final total require correction or explicit acknowledgment. Nested subitems are retained and displayed as details; independent subitem editing is future work. Currency ledgers stay separate without exchange-rate conversion. Category charts allocate the paid total proportionally across item categories, including tax and discounts.
+
+### Frontend code map
+
+```text
+apps/frontend/
+  lib/
+    main.dart                     App entry point and backend URL
+    app.dart                      Initialization, navigation, dependency wiring
+    core/money.dart               Exact amount parsing and currency formatting
+    models/                       Saved expenses and editable receipt drafts
+    data/                         SQLite repository and isolated sample fixtures
+    services/                     Backend extraction client and camera/gallery
+    state/                        Ledger operations, budgets, filters, export
+    ui/
+      theme.dart                  Shared colors, typography, component styles
+      components/                 Cards, receipt preview, category picker, charts
+      screens/                    Home, expenses, scan, review, insights, settings
+  test/                           Financial validation, state, HTTP, widget tests
+  tool/bootstrap.py               Generate/configure native platform runners
+```
+
+Screens depend on `ReceiptService` and `LedgerRepository`, so a future extraction provider or storage implementation can be connected without putting model experiment code into the mobile UI.
 
 ## Quick start: Gemini extraction
 
@@ -73,8 +206,8 @@ The new application entry point focuses on items and totals. The previous compan
 
 ```text
 apps/
-  backend/                        Future API, expense storage, application logic
-  frontend/                       Future receipt review and finance interface
+  backend/                        Future API and hosted application logic
+  frontend/                       Flutter mobile app; local SQLite expense storage
 packages/
   receipt_extraction/
     providers/gemini.py           Current hosted extraction provider
@@ -130,7 +263,7 @@ print(result["usage"])
 
 `ExtractionResult` separates the common receipt payload from provider/model metadata and token usage. A future local provider can implement `extract(image_path)` and return the same result type. The application should depend on that contract; experiments should not be imported into backend startup.
 
-The API key belongs in the backend environment. The future frontend should submit images to the backend and display values for review. API routes, authentication, storage, category classification, and the interface have not been implemented yet; no frontend or backend framework is assumed by this repository.
+The API key belongs in the backend environment. The Flutter frontend is prepared to submit images to the backend and display values for review. API routes, authentication, server storage, and automated category classification have not been implemented; the mobile app currently stores reviewed expenses locally.
 
 For known currency conventions, the validation module provides exact decimal parsing:
 
@@ -221,6 +354,16 @@ python -m unittest discover -s tests -v
 
 Model tests do not train a model or require a GPU. They test conversion, parsing, stopping, score alignment, request configuration, cache behavior, and evaluation calculations. Actual extraction accuracy requires labeled receipts and live inference.
 
+After Flutter setup, run the mobile tests separately:
+
+```bash
+cd apps/frontend
+flutter analyze --no-fatal-infos
+flutter test
+```
+
+These tests use sample data, an in-memory repository, and mocked HTTP responses. They cover strict money parsing, amount reconciliation, category allocation, sample/personal separation, save retries, backend response handling, and the sample scan/review flow. Native camera permissions and SQLite persistence also need checks on an emulator or phone.
+
 ## Local documentation and Git
 
 `README.md` contains the public setup and usage instructions. Additional `docs/` notes are local working material. Exclude them in each checkout through `.git/info/exclude`:
@@ -233,4 +376,4 @@ This local rule is not pushed to GitHub. README remains trackable, and the share
 
 ## Next application work
 
-Implement receipt review/correction, currency-aware reconciliation, item category classification, and expense storage behind the extraction contract. Add the backend and frontend after choosing their frameworks. Keep the Gemini provider as the working baseline while experimenting with other models independently.
+Implement the backend extraction route using `packages/receipt_extraction`, then connect and test real mobile scans. Add authentication, server storage/sync, and automated item category suggestions as needed. Keep user review before saving financial records and Gemini as the working baseline while experimenting with other models independently.
