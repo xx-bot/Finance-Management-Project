@@ -1,0 +1,8 @@
+.env
+.env.*
+!*.example
+bin/
+coverage*
+*.test
+uploads/
+.git/

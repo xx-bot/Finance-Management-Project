@@ -13,6 +13,9 @@ void main() {
   ));
   runApp(PocketApp(
     repository: SqliteLedgerRepository(),
-    receiptService: BackendReceiptService(baseUrl: const String.fromEnvironment('API_BASE_URL')),
+    receiptService: BackendReceiptService(
+      baseUrl: const String.fromEnvironment('API_BASE_URL'),
+      authToken: const String.fromEnvironment('API_AUTH_TOKEN'),
+    ),
   ));
 }

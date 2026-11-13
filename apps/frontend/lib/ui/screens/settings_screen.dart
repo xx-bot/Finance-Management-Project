@@ -6,6 +6,7 @@ import '../../services/receipt_service.dart';
 import '../../state/ledger_state.dart';
 import '../components/common.dart';
 import '../theme.dart';
+import 'connection_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.state, required this.receiptService});
@@ -53,7 +54,9 @@ class SettingsScreen extends StatelessWidget {
       const SizedBox(height: 24), const SectionHeading('Your receipts'),
       PocketCard(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Column(children: [
         ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.cloud_outlined), title: const Text('Receipt scanning'),
-          subtitle: Text(receiptService.isConfigured ? 'Ready to send photos for extraction' : 'Not connected yet. Sample scans are available.'),
+          subtitle: Text(receiptService.isConfigured ? 'Connected. Tap to manage your session.' : 'Tap to connect and sign in.'),
+          onTap: receiptService is ConnectableReceiptService ? () => Navigator.push(context,
+            MaterialPageRoute<void>(builder: (_) => ConnectionScreen(service: receiptService as ConnectableReceiptService))) : null,
           trailing: Icon(receiptService.isConfigured ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
               color: receiptService.isConfigured ? PocketColors.green : PocketColors.muted)),
         const Divider(),
@@ -61,8 +64,10 @@ class SettingsScreen extends StatelessWidget {
           subtitle: Text('Copy ${state.currency.code} expenses as CSV'), trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () async {
             await Clipboard.setData(ClipboardData(text: state.exportCsv()));
-            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-              state.previewMode ? 'Sample expenses copied as CSV.' : 'Expenses copied as CSV.')));
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+                state.previewMode ? 'Sample expenses copied as CSV.' : 'Expenses copied as CSV.')));
+            }
           }),
       ])),
       const SizedBox(height: 24), const SectionHeading('Explore at your pace'),

@@ -178,17 +178,26 @@ class ReceiptDraft {
       if (item is! String) throw const FormatException('Receipt fields must be printed strings.');
       return item;
     }
+    ExpenseCategory category(dynamic value) {
+      if (value != null && value is! String) {
+        throw const FormatException('Receipt categories must be strings.');
+      }
+      return ExpenseCategory.fromName(value as String?);
+    }
     void validateItem(dynamic entry, int depth) {
       const fields = ['description', 'quantity', 'unit_price', 'line_total'];
       if (depth > 16 || entry is! Map || entry['sub_items'] is! List || !fields.every(entry.containsKey)) {
         throw const FormatException('An extracted item could not be read.');
       }
       for (final field in fields) { text(entry[field]); }
+      category(entry['category']);
       for (final child in entry['sub_items'] as List) { validateItem(child, depth + 1); }
     }
     return ReceiptDraft(
       currency: currency,
       date: DateTime.now(),
+      merchant: text(raw['merchant']),
+      category: category(raw['category']),
       total: text(raw['total']),
       lines: (raw['items'] as List).map((entry) {
         validateItem(entry, 0);
@@ -197,6 +206,7 @@ class ReceiptDraft {
           quantity: text(entry['quantity']),
           unitPrice: text(entry['unit_price']),
           amount: text(entry['line_total']),
+          category: category(entry['category']),
           subItems: (entry['sub_items'] as List).map((item) => Map<String, dynamic>.from(item as Map)).toList(),
         );
       }).toList(),

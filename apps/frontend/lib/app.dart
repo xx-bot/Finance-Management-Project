@@ -33,7 +33,12 @@ class _PocketAppState extends State<PocketApp> {
   void initState() {
     super.initState();
     _state = LedgerState(widget.repository);
-    _initialization = _state.initialize();
+    _initialization = _initialize();
+  }
+  Future<void> _initialize() async {
+    await _state.initialize();
+    final service = widget.receiptService;
+    if (service is ConnectableReceiptService) await service.initialize();
   }
   @override
   void dispose() {
@@ -56,7 +61,7 @@ class _PocketAppState extends State<PocketApp> {
             const Icon(Icons.folder_off_outlined, size: 42, color: PocketColors.green),
             const SizedBox(height: 20), Text('Your pocket needs a moment.', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
             const SizedBox(height: 10), const Text('We couldn’t open your saved expenses. Try again to keep your records intact.', textAlign: TextAlign.center),
-            const SizedBox(height: 20), FilledButton(onPressed: () => setState(() => _initialization = _state.initialize()), child: const Text('Try again')),
+            const SizedBox(height: 20), FilledButton(onPressed: () => setState(() => _initialization = _initialize()), child: const Text('Try again')),
           ])))));
       }
       return PocketShell(state: _state, service: widget.receiptService, picker: widget.photoPicker ?? ReceiptPhotoPicker());
@@ -75,6 +80,13 @@ class PocketShell extends StatefulWidget {
 
 class _PocketShellState extends State<PocketShell> {
   int _tab = 0;
+  late final Listenable _changes;
+  @override
+  void initState() {
+    super.initState();
+    final service = widget.service;
+    _changes = Listenable.merge([widget.state, if (service is ConnectableReceiptService) service]);
+  }
   Future<void> _scan() async {
     final saved = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) =>
         ScanScreen(state: widget.state, service: widget.service, picker: widget.picker)));
@@ -94,7 +106,7 @@ class _PocketShellState extends State<PocketShell> {
   }
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(listenable: widget.state, builder: (context, _) => Scaffold(
+  Widget build(BuildContext context) => ListenableBuilder(listenable: _changes, builder: (context, _) => Scaffold(
     body: SafeArea(bottom: false, child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640),
       child: IndexedStack(index: _tab, children: [
         HomeScreen(state: widget.state, onScan: _scan, onManual: _manual,

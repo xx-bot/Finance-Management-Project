@@ -14,11 +14,12 @@ class PocketCard extends StatelessWidget {
   final Color color;
   final EdgeInsetsGeometry padding;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: color == Colors.white ? PocketColors.line : color)),
-    child: child,
+  Widget build(BuildContext context) => Material(
+    color: color,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: color == Colors.white ? PocketColors.line : color)),
+    clipBehavior: Clip.antiAlias,
+    child: Padding(padding: padding, child: child),
   );
 }
 

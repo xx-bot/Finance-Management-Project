@@ -9,6 +9,7 @@ import '../../state/ledger_state.dart';
 import '../components/common.dart';
 import '../theme.dart';
 import 'review_screen.dart';
+import 'connection_screen.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key, required this.state, required this.service, required this.picker});
@@ -56,6 +57,10 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _extract() async {
     if (_photo == null || _busy) return;
+    if (!widget.service.isConfigured) {
+      final connected = await _connect();
+      if (!connected || !mounted) return;
+    }
     setState(() { _busy = true; _error = null; });
     try {
       final draft = await widget.service.extract(_photo!, widget.state.currency);
@@ -65,6 +70,15 @@ class _ScanScreenState extends State<ScanScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<bool> _connect() async {
+    final service = widget.service;
+    if (service is! ConnectableReceiptService) return false;
+    final connected = await Navigator.push<bool>(context, MaterialPageRoute(
+      builder: (_) => ConnectionScreen(service: service)));
+    if (mounted) setState(() => _error = null);
+    return connected == true && service.isConfigured;
   }
 
   Future<void> _sample() async {
@@ -116,7 +130,8 @@ class _ScanScreenState extends State<ScanScreen> {
           const SizedBox(height: 6), Text(_sampleBusy ? 'No photo is uploaded for this preview.' : 'You’ll review all items and the total next.', style: theme.bodySmall),
         ]))
         else ...[
-          if (_photo != null) FilledButton.icon(onPressed: _extract, icon: const Icon(Icons.auto_awesome_outlined, size: 20), label: const Text('Extract receipt')),
+          if (_photo != null) FilledButton.icon(onPressed: _extract, icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+            label: Text(widget.service.isConfigured ? 'Extract receipt' : 'Connect & extract')),
           if (_photo != null) const SizedBox(height: 10),
           Row(children: [
             Expanded(child: _photo == null
@@ -126,7 +141,9 @@ class _ScanScreenState extends State<ScanScreen> {
                 icon: const Icon(Icons.photo_library_outlined, size: 20), label: const Text('Gallery'))),
           ]),
           const SizedBox(height: 16), TextButton(onPressed: _sample, child: const Text('Try a sample receipt')),
-          if (!widget.service.isConfigured) Text('Photo extraction isn’t connected yet. Explore the sample flow or add an expense manually.',
+          if (!widget.service.isConfigured && widget.service is ConnectableReceiptService)
+            OutlinedButton(onPressed: _connect, child: const Text('Connect receipt service')),
+          if (!widget.service.isConfigured) Text('Connect your receipt service and sign in to read real photos. Sample receipts are available to explore.',
               textAlign: TextAlign.center, style: theme.bodySmall),
         ],
       ]),

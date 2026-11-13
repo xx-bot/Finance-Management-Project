@@ -84,7 +84,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           actions: [if (draft.isDemo) const Padding(padding: EdgeInsets.only(right: 16), child: Center(child: Tag('Sample')))]),
         body: AbsorbPointer(absorbing: _saving, child: ListView(padding: const EdgeInsets.fromLTRB(22, 12, 22, 24), children: [
           Text('Check the little details.', style: theme.headlineMedium), const SizedBox(height: 8),
-          Text('A quick review keeps your spending picture clear.', style: theme.bodyMedium?.copyWith(color: PocketColors.muted)),
+          Text('Check the merchant, amounts and suggested categories. You can edit them before saving.', style: theme.bodyMedium?.copyWith(color: PocketColors.muted)),
           const SizedBox(height: 22),
           ReceiptPreview(bytes: draft.imageBytes, path: draft.savedImagePath,
             merchant: draft.merchant, lines: draft.lines.map((line) => (line.description, line.amount)).toList(), total: draft.total, sample: draft.isDemo),
@@ -104,7 +104,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               }),
             const Divider(),
             ListTile(contentPadding: EdgeInsets.zero, leading: CategoryIcon(draft.category, size: 30),
-              title: Text(draft.category.label), subtitle: const Text('Default for new items'), trailing: const Icon(Icons.expand_more_rounded),
+              title: Text(draft.category.label), subtitle: const Text('Receipt category · Default for new items'), trailing: const Icon(Icons.expand_more_rounded),
               onTap: () async {
                 final value = await chooseCategory(context, draft.category);
                 if (value != null && mounted) setState(() => draft.category = value);
@@ -137,6 +137,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 CategoryIcon(draft.lines[index].category, size: 36), const SizedBox(width: 11),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(draft.lines[index].description.isEmpty ? 'Item ${index + 1}' : draft.lines[index].description, style: theme.titleSmall),
+                  const SizedBox(height: 4), Text(draft.lines[index].category.label, style: theme.bodySmall),
                   const SizedBox(height: 4), Text([
                     if (draft.lines[index].quantity.isNotEmpty) 'Qty ${draft.lines[index].quantity}',
                     if (draft.lines[index].unitPrice.isNotEmpty) 'Unit ${draft.lines[index].unitPrice}',
@@ -217,6 +218,7 @@ class ItemEditor extends StatefulWidget {
 class _ItemEditorState extends State<ItemEditor> {
   late final TextEditingController _description, _quantity, _unit, _amount;
   late ExpenseCategory _category;
+  late final List<Map<String, dynamic>> _subItems;
   String? _error;
   @override
   void initState() {
@@ -226,6 +228,26 @@ class _ItemEditorState extends State<ItemEditor> {
     _unit = TextEditingController(text: widget.line.unitPrice);
     _amount = TextEditingController(text: widget.line.amount);
     _category = widget.line.category;
+    _subItems = _copySubItems(widget.line.subItems);
+  }
+  List<Map<String, dynamic>> _copySubItems(List<Map<String, dynamic>> items) => items.map((item) => {
+    ...item,
+    'sub_items': _copySubItems((item['sub_items'] as List? ?? [])
+        .map((child) => Map<String, dynamic>.from(child as Map)).toList()),
+  }).toList();
+
+  Iterable<Widget> _modifierCategories(List<Map<String, dynamic>> items, [int depth = 0]) sync* {
+    for (final item in items) {
+      final category = ExpenseCategory.fromName(item['category'] as String?);
+      yield ListTile(contentPadding: EdgeInsets.only(left: depth * 12.0),
+        leading: CategoryIcon(category, size: 30),
+        title: Text(item['description'] as String? ?? 'Additional detail'), subtitle: Text(category.label),
+        trailing: const Icon(Icons.expand_more_rounded), onTap: () async {
+          final value = await chooseCategory(context, category);
+          if (value != null && mounted) setState(() => item['category'] = value.name);
+        });
+      yield* _modifierCategories(item['sub_items'] as List<Map<String, dynamic>>, depth + 1);
+    }
   }
   @override
   void dispose() { for (final controller in [_description, _quantity, _unit, _amount]) { controller.dispose(); } super.dispose(); }
@@ -235,7 +257,7 @@ class _ItemEditorState extends State<ItemEditor> {
       if (_description.text.trim().isEmpty || _amount.text.trim().isEmpty) throw const FormatException();
       if (widget.style != null && parseMinor(_amount.text, widget.style!) < 0) throw const FormatException();
       Navigator.pop(context, DraftLine(description: _description.text.trim(), quantity: _quantity.text.trim(),
-          unitPrice: _unit.text.trim(), amount: _amount.text.trim(), category: _category, subItems: widget.line.subItems));
+          unitPrice: _unit.text.trim(), amount: _amount.text.trim(), category: _category, subItems: _subItems));
     } on FormatException { setState(() => _error = 'Add an item name and check its printed amount.'); }
   }
 
@@ -256,6 +278,10 @@ class _ItemEditorState extends State<ItemEditor> {
           final value = await chooseCategory(context, _category);
           if (value != null && mounted) setState(() => _category = value);
         }),
+      if (_subItems.isNotEmpty) ...[
+        const SizedBox(height: 12), const Text('Modifier categories'),
+        ..._modifierCategories(_subItems),
+      ],
       if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: PocketColors.red))),
       const SizedBox(height: 8), SizedBox(width: double.infinity, child: FilledButton(onPressed: _save, child: const Text('Save item'))),
     ])),

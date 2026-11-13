@@ -84,4 +84,38 @@ void main() {
     expect(expense.allocations[ExpenseCategory.household], 500);
     expect(Expense.fromJson(expense.toJson()).allocations, expense.allocations);
   });
+
+  test('merchant and category suggestions are editable and user choices are saved', () {
+    final draft = ReceiptDraft.fromExtraction({
+      'merchant': 'Corner Cafe', 'category': 'dining', 'total': '12.00',
+      'items': [{
+        'description': 'Coffee', 'quantity': '1', 'unit_price': '12.00',
+        'line_total': '12.00', 'category': 'dining', 'sub_items': [],
+      }],
+    }, LedgerCurrency.myr);
+    expect(draft.merchant, 'Corner Cafe');
+    expect(draft.category, ExpenseCategory.dining);
+    expect(draft.lines.single.category, ExpenseCategory.dining);
+    expect(draft.numberStyle, isNull);
+    expect(draft.errors, isNotEmpty);
+
+    draft.merchant = 'Corrected merchant';
+    draft.category = ExpenseCategory.shopping;
+    draft.lines.single.category = ExpenseCategory.household;
+    draft.numberStyle = NumberStyle.international;
+    final saved = Expense.fromJson(draft.toExpense(id: 'reviewed').toJson());
+    expect(saved.merchant, 'Corrected merchant');
+    expect(saved.category, ExpenseCategory.shopping);
+    expect(saved.lines.single.category, ExpenseCategory.household);
+    expect(saved.totalMinor, 1200);
+  });
+
+  test('unknown suggestions fall back to Other and unreadable merchant stays empty', () {
+    final draft = ReceiptDraft.fromExtraction({
+      'merchant': null, 'category': 'unknown', 'items': [], 'total': '12.00',
+    }, LedgerCurrency.myr);
+    expect(draft.merchant, isEmpty);
+    expect(draft.category, ExpenseCategory.other);
+    expect(draft.errors, contains('Add a merchant or expense name.'));
+  });
 }

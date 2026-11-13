@@ -29,8 +29,19 @@ def configure_platforms(frontend):
         application = root.find('application')
         if application is not None:
             application.set(f'{{{ANDROID}}}label', 'Pocket Ledger')
+            application.set(f'{{{ANDROID}}}fullBackupContent', '@xml/pocket_backup_rules')
+            application.set(f'{{{ANDROID}}}dataExtractionRules', '@xml/pocket_data_extraction_rules')
         ET.indent(tree, space='    ')
         tree.write(manifest, encoding='unicode')
+        resources = manifest.parent / 'res/xml'
+        resources.mkdir(parents=True, exist_ok=True)
+        (resources / 'pocket_backup_rules.xml').write_text(
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<full-backup-content><exclude domain="sharedpref" path="." /></full-backup-content>\n')
+        (resources / 'pocket_data_extraction_rules.xml').write_text(
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<data-extraction-rules><cloud-backup><exclude domain="sharedpref" path="." /></cloud-backup>'
+            '<device-transfer><exclude domain="sharedpref" path="." /></device-transfer></data-extraction-rules>\n')
     # Permit a local HTTP backend during Android debug development only.
     debug = frontend / 'android/app/src/debug/AndroidManifest.xml'
     if debug.exists():
@@ -59,6 +70,23 @@ def configure_platforms(frontend):
         })
         with info.open('wb') as file:
             plistlib.dump(values, file, sort_keys=False)
+        entitlements = frontend / 'ios/Runner/Runner.entitlements'
+        if entitlements.exists():
+            with entitlements.open('rb') as file:
+                rights = plistlib.load(file)
+        else:
+            rights = {}
+        rights.setdefault('keychain-access-groups', [])
+        with entitlements.open('wb') as file:
+            plistlib.dump(rights, file, sort_keys=False)
+        project = frontend / 'ios/Runner.xcodeproj/project.pbxproj'
+        if project.exists():
+            # Only app configurations contain this Info.plist; test targets are separate.
+            source = project.read_text()
+            if 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' not in source:
+                source = source.replace('INFOPLIST_FILE = Runner/Info.plist;',
+                    'INFOPLIST_FILE = Runner/Info.plist;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;')
+                project.write_text(source)
 
 
 def main():

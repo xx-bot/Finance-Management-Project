@@ -10,8 +10,9 @@ import 'package:pocket_ledger/services/receipt_service.dart';
 void main() {
   final photo = ReceiptPhoto(Uint8List.fromList([0xff, 0xd8, 0xff]), 'receipt.jpg');
   test('uploads one multipart image to the backend and retains the receipt photo', () async {
-    final service = BackendReceiptService(baseUrl: 'https://backend.example/', client: MockClient((request) async {
+    final service = BackendReceiptService(baseUrl: 'https://backend.example/', authToken: 'test-session', client: MockClient((request) async {
       expect(request.method, 'POST');
+      expect(request.headers['authorization'], 'Bearer test-session');
       expect(request.url.toString(), 'https://backend.example/api/receipts/extract');
       expect(request.headers['content-type'], startsWith('multipart/form-data'));
       final multipart = latin1.decode(request.bodyBytes);
@@ -31,7 +32,7 @@ void main() {
     for (final response in [http.Response('{}', 429), http.Response('not json', 200),
         http.Response('{"total":"1"}', 200), http.Response('{"items":[]}', 200),
         http.Response('{"items":[{}],"total":"1"}', 200)]) {
-      final service = BackendReceiptService(baseUrl: 'https://backend.example', client: MockClient((_) async => response));
+      final service = BackendReceiptService(baseUrl: 'https://backend.example', authToken: 'test-session', client: MockClient((_) async => response));
       await expectLater(service.extract(photo, LedgerCurrency.idr), throwsA(isA<ReceiptServiceException>()));
       service.close();
     }

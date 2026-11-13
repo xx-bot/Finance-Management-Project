@@ -48,7 +48,7 @@ class CategoryRing extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(width: size, height: size,
     child: Stack(alignment: Alignment.center, children: [
       Positioned.fill(child: CustomPaint(painter: _RingPainter(values))),
-      if (center != null) center!,
+      ?center,
     ]),
   );
 }

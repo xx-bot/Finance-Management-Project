@@ -5,6 +5,21 @@ import 'package:pocket_ledger/data/ledger_repository.dart';
 import 'package:pocket_ledger/models/expense.dart';
 import 'package:pocket_ledger/models/receipt_draft.dart';
 import 'package:pocket_ledger/services/receipt_service.dart';
+import 'package:pocket_ledger/services/connection_store.dart';
+
+class MemoryConnectionStore implements ConnectionStore {
+  String? value;
+  bool failWrites = false;
+  @override
+  Future<String?> read() async => value;
+  @override
+  Future<void> write(String next) async {
+    if (failWrites) throw StateError('Secure storage unavailable');
+    value = next;
+  }
+  @override
+  Future<void> clear() async { value = null; }
+}
 
 class MemoryLedgerRepository implements LedgerRepository {
   final Map<String, Expense> saved = {};
